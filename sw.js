@@ -1,7 +1,24 @@
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/my-finance/sw.js').catch(()=>{});
-  });
-}
-</script>
+const CACHE = 'pf-cache-v1';
+const ASSETS = [
+  '/my-finance/',
+  '/my-finance/index.html',
+  '/my-finance/manifest.json',
+  '/my-finance/sw.js'
+  // حط هنا أي ملفات ثابتة مهمة (أيقونات/صور/خطوط) بنفس الباث
+];
+
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+    )
+  );
+});
+
+self.addEventListener('fetch', e => {
+  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+});
