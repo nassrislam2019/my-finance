@@ -4,13 +4,12 @@ const ASSETS = [
   '/my-finance/index.html',
   '/my-finance/manifest.json',
   '/my-finance/sw.js'
-  // حط هنا أي ملفات ثابتة مهمة (أيقونات/صور/خطوط) بنفس الباث
+  // لو عندك صور/أيقونات/خطوط ثابته ضيفها هنا بنفس الباث
 ];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
 });
-
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -18,7 +17,6 @@ self.addEventListener('activate', e => {
     )
   );
 });
-
 self.addEventListener('fetch', e => {
   e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
 });
