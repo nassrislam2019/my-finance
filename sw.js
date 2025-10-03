@@ -1,4 +1,4 @@
-const CACHE = 'pf-cache-v1';
+const CACHE = 'pf-cache-v2';
 const ASSETS = [
   './',
   './index.html',
