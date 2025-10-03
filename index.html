@@ -6,18 +6,18 @@
   <title>الالتزامات الشهرية</title>
 
   <style>
-    /* ===== ألوان أفتح مع تباين مناسب ===== */
+    /* ===== ألوان فاتحة مع خلفية بيضاء ===== */
     :root{
-      --bg:#2b3342;           /* خلفية الصفحة (أفتح من اللون السابق) */
-      --card:#394355;         /* خلفية البطاقات/الأقسام */
-      --muted:#47536b;        /* حدود وعناصر ثانوية */
-      --text:#f3f5f7;         /* لون الخط الأساسي */
-      --text-muted:#cfd7e3;   /* خط ثانوي */
+      --bg:#ffffff;           /* خلفية الصفحة أبيض */
+      --card:#f7f9fc;         /* خلفية البطاقات */
+      --muted:#d1d9e6;        /* حدود وعناصر ثانوية */
+      --text:#1a1d23;         /* لون الخط الأساسي */
+      --text-muted:#6c7a91;   /* خط ثانوي */
       --accent:#20c997;       /* لون زر رئيسي أخضر تركواز */
       --danger:#ff6b6b;       /* لون الحذف/تحذير */
-      --input:#232b3a;        /* خلفية الحقول */
-      --shadow: 0 8px 24px rgba(0,0,0,.25);
-      --radius:16px;
+      --input:#ffffff;        /* خلفية الحقول */
+      --shadow: 0 4px 12px rgba(0,0,0,.1);
+      --radius:12px;
       --pad:14px;
     }
 
@@ -62,6 +62,245 @@
     }
     input, select{
       width:100%;
+      background:var(--input);
+      color:var(--text);
+      border:1px solid var(--muted);
+      border-radius:8px;
+      padding:12px 14px;
+      outline:none;
+    }
+    input::placeholder{color:#9fb0c9}
+    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    .badge{
+      background:#eef2f8;
+      border:1px solid var(--muted);
+      padding:6px 10px;
+      border-radius:999px;
+      font-size:.9rem;
+      color:var(--text-muted);
+    }
+
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center;
+      gap:8px;
+      padding:12px 16px;
+      border-radius:8px;
+      border:1px solid transparent;
+      background:var(--accent);
+      color:#fff;
+      font-weight:600;
+      cursor:pointer;
+      transition:transform .08s ease, filter .15s ease;
+    }
+    .btn:hover{filter:brightness(1.05)}
+    .btn:active{transform:translateY(1px)}
+    .btn-ghost{
+      background:transparent;
+      color:var(--text);
+      border-color:var(--muted);
+    }
+    .btn-danger{ background:var(--danger); color:#fff; }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      overflow:hidden;
+      border-radius:8px;
+      background:#fff;
+      border:1px solid var(--muted);
+    }
+    th, td{
+      padding:12px 14px;
+      border-bottom:1px solid var(--muted);
+      text-align:right;
+      font-size:.95rem;
+    }
+    th{ color:var(--text-muted); font-weight:600; background:#f0f3f8; }
+    tr:last-child td{ border-bottom:none; }
+    .help{ color:var(--text-muted); font-size:.92rem; }
+
+    .hr{height:1px; background:var(--muted); margin:14px 0}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>الالتزامات الشهرية</h1>
+
+    <div class="card">
+      <h2>تسجيل/تحديث التزام شهري</h2>
+      <div class="grid-2" style="margin-top:12px">
+        <div>
+          <label for="acc">من أي حساب</label>
+          <select id="acc">
+            <option>كاش</option>
+            <option>بنك</option>
+            <option>فودافون كاش</option>
+          </select>
+        </div>
+        <div>
+          <label for="amount">المبلغ (ج.م)</label>
+          <input id="amount" type="number" min="0" step="0.01" placeholder="0.00">
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top:12px">
+        <div>
+          <label for="dueDate">يوم الاستحقاق (تاريخ أول استحقاق)</label>
+          <input id="dueDate" type="date" />
+        </div>
+        <div>
+          <label>الاستحقاق القادم (يتم تحديثه تلقائيًا)</label>
+          <input id="nextDueReadonly" type="text" disabled>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:14px">
+        <button class="btn" id="saveBtn">تسجيل التزام شهري</button>
+        <button class="btn btn-ghost" id="resetBtn">إعادة ضبط التاريخ</button>
+      </div>
+
+      <p class="help" style="margin-top:10px">
+        أدخل <b>تاريخ أول استحقاق</b> مرة واحدة فقط. بعد ذلك، إذا مرّ تاريخ الاستحقاق،
+        سيتم ترحيله تلقائيًا لنفس اليوم في الشهر التالي.
+      </p>
+      <div class="hr"></div>
+      <div class="row">
+        <span class="badge" id="debugBadge">—</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>آخر عمليات</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>الاسم</th>
+            <th>المبلغ</th>
+            <th>اليوم</th>
+            <th>الحساب</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="opsBody">
+          <tr><td colspan="5" style="text-align:center;color:var(--text-muted)">لا توجد عمليات بعد</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="help">⚠️ كل البيانات محفوظة محليًا في <code>localStorage</code>.</p>
+  </div>
+
+  <script>
+    function formatLocalDate(d){
+      const y = d.getFullYear();
+      const m = String(d.getMonth()+1).padStart(2,'0');
+      const day = String(d.getDate()).padStart(2,'0');
+      return `${y}-${m}-${day}`;
+    }
+    function parseLocalDate(str){
+      const [y,m,d] = str.split('-').map(Number);
+      const dt = new Date(y, m-1, d, 0,0,0,0);
+      dt.setHours(0,0,0,0);
+      return dt;
+    }
+    function startOfToday(){
+      const t = new Date(); t.setHours(0,0,0,0); return t;
+    }
+    function addMonthsPreserveDOM(date, months){
+      const d = new Date(date.getTime());
+      const targetMonth = d.getMonth() + months;
+      const day = d.getDate();
+      const y = d.getFullYear();
+      const temp = new Date(y, targetMonth + 1, 0);
+      const lastDay = temp.getDate();
+      d.setMonth(targetMonth, Math.min(day, lastDay));
+      d.setHours(0,0,0,0);
+      return d;
+    }
+
+    const dueInput = document.getElementById('dueDate');
+    const nextDueReadonly = document.getElementById('nextDueReadonly');
+    const saveBtn = document.getElementById('saveBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const debugBadge = document.getElementById('debugBadge');
+
+    const LS_KEY = 'monthlyDueDate'; 
+    const LS_FIRST_KEY = 'monthlyFirstDueDate'; 
+
+    function setBadge(msg){ debugBadge.textContent = msg; }
+    function loadDue(){
+      const stored = localStorage.getItem(LS_KEY);
+      if(!stored){ return null; }
+      try { return parseLocalDate(stored); } catch { return null; }
+    }
+    function saveDue(date){
+      localStorage.setItem(LS_KEY, formatLocalDate(date));
+    }
+    function ensureAdvanced(){
+      let due = loadDue();
+      if(!due) return null;
+      const today = startOfToday();
+      while(due < today){ 
+        due = addMonthsPreserveDOM(due, 1);
+      }
+      saveDue(due);
+      return due;
+    }
+    function syncUI(){
+      let due = loadDue();
+      if(due){
+        due = ensureAdvanced() || due;
+        dueInput.value = formatLocalDate(due);      
+        nextDueReadonly.value = formatLocalDate(due); 
+        const first = localStorage.getItem(LS_FIRST_KEY);
+        setBadge(first ? `أول استحقاق: ${first} — الحالي/القادم: ${formatLocalDate(due)}` : `الحالي/القادم: ${formatLocalDate(due)}`);
+      }else{
+        dueInput.value = '';
+        nextDueReadonly.value = '';
+        setBadge('لم يتم تعيين تاريخ الاستحقاق بعد');
+      }
+    }
+
+    dueInput.addEventListener('change', () => {
+      if(!dueInput.value) return;
+      const chosen = parseLocalDate(dueInput.value);
+      if(!localStorage.getItem(LS_FIRST_KEY)){
+        localStorage.setItem(LS_FIRST_KEY, dueInput.value);
+      }
+      saveDue(chosen);
+      ensureAdvanced();
+      syncUI();
+    });
+
+    saveBtn.addEventListener('click', () => {
+      if(!dueInput.value){
+        alert('من فضلك اختر تاريخ أول استحقاق.');
+        return;
+      }
+      const chosen = parseLocalDate(dueInput.value);
+      saveDue(chosen);
+      if(!localStorage.getItem(LS_FIRST_KEY)){
+        localStorage.setItem(LS_FIRST_KEY, dueInput.value);
+      }
+      ensureAdvanced();
+      syncUI();
+      alert('تم حفظ/تحديث الالتزام الشهري.');
+    });
+
+    resetBtn.addEventListener('click', () => {
+      if(confirm('هل تود مسح تاريخ الاستحقاق وإعادة الضبط؟')){
+        localStorage.removeItem(LS_KEY);
+        localStorage.removeItem(LS_FIRST_KEY);
+        syncUI();
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      syncUI();
+    });
+  </script>
+</body>
+</html>      width:100%;
       background:var(--input);
       color:var(--text);
       border:1px solid var(--muted);
