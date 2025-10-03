@@ -6,7 +6,9 @@
 <title>دفتر حساباتي — تتبُّع المصروفات والدخل</title>
 <meta name="description" content="موقع شخصي بسيط لإدارة المصروفات والدخل — يعمل أوفلاين (PWA) ويحفظ البيانات محليًا." />
 <meta name="theme-color" content="#ffffff" />
-<link rel="manifest" href="manifest.json?v=4" />
+<!-- مهم: مسار المانيفست على GitHub Pages داخل /my-finance/ -->
+<link rel="manifest" href="/my-finance/manifest.json" />
+<meta name="mobile-web-app-capable" content="yes" />
 <style>
 :root{
   --bg:#ffffff; --card:#f2f2f2; --muted:#555555; --txt:#000000;
@@ -102,6 +104,8 @@ header{display:flex;gap:12px;align-items:center;justify-content:space-between;ma
       <button id="exportJson" class="btn btn-outline" type="button">تصدير JSON</button>
       <button id="exportCsv" class="btn btn-outline" type="button">تصدير CSV</button>
       <label class="btn btn-muted" for="importFile">استيراد JSON<input id="importFile" type="file" accept="application/json" style="display:none"></label>
+      <!-- زر تثبيت التطبيق -->
+      <button id="installBtn" class="btn btn-outline" type="button" style="display:none">تثبيت التطبيق</button>
     </div>
   </header>
 
@@ -259,7 +263,6 @@ const KEY='pf_ledger_v1', ACC_KEY='pf_accounts_v1', CAT_KEY='pf_categories_v1', 
 let ledger=JSON.parse(localStorage.getItem(KEY)||'[]');
 let accounts=JSON.parse(localStorage.getItem(ACC_KEY)||'[]');
 let categories=JSON.parse(localStorage.getItem(CAT_KEY)||'[]');
-/* الالتزام الآن لا يحمل حساب */
 let commitments=JSON.parse(localStorage.getItem(COM_KEY)||'[]'); // {id,name,amount,firstDue,nextDue,recurring,endAt}
 
 /* افتراضات أولية */
@@ -282,7 +285,7 @@ const els={
   newCatName:$('#newCatName'), newCatType:$('#newCatType'), addCategory:$('#addCategory'), catsList:$('#catsList'),
   monthPicker:$('#monthPicker'), refreshReports:$('#refreshReports'), tbodyMonthly:$('#tbodyMonthly'), chartMonthly:$('#chartMonthly'),
   cName:$('#cName'), cAmount:$('#cAmount'), cFirstDue:$('#cFirstDue'), cRecurring:$('#cRecurring'), cEndAt:$('#cEndAt'),
-  addCommitment:$('#addCommitment'), tbodyCommit:$('#tbodyCommit')
+  addCommitment:$('#addCommitment'), tbodyCommit:$('#tbodyCommit'), installBtn:$('#installBtn')
 };
 ['saveTx','resetForm','addAccount','addCategory','exportJson','exportCsv','refreshReports','addCommitment']
 .forEach(id=>document.getElementById(id)?.setAttribute('type','button'));
@@ -495,7 +498,7 @@ els.refreshReports?.addEventListener('click', drawMonthly);
 /* ===== الالتزامات ===== */
 let editCommitId=null;
 
-/* هجرة قديم: إزالة الحساب إن وُجد */
+/* هجرة قديم */
 function migrateCommit(c){
   if(c.day && !c.firstDue){
     const today=startOfToday(); const base=new Date(today.getFullYear(), today.getMonth(), Math.min(Math.max(1,c.day),28));
@@ -503,12 +506,12 @@ function migrateCommit(c){
   }
   if(!c.nextDue && c.firstDue){ c.nextDue=c.firstDue; }
   if(typeof c.recurring!=='boolean') c.recurring=false;
-  if(c.account) delete c.account;            // لم نعد نخزن الحساب داخل الالتزام
+  if(c.account) delete c.account;
   if(c.endAt===undefined) c.endAt=null;
   return c;
 }
 
-/* تقدّم nextDue لو فات، مع مراعاة نهاية التكرار */
+/* تقدّم nextDue لو فات */
 function ensureAdvanceAllCommitments(){
   const today=startOfToday(); let touched=false;
   for(const c of commitments){
@@ -638,8 +641,26 @@ function initCollapsibles(){
   });
 }
 
-/* Service Worker */
-if('serviceWorker' in navigator){ window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js?v=4').catch(()=>{}); }); }
+/* ===== تثبيت التطبيق داخل الصفحة ===== */
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  deferredPrompt = e;
+  if(els.installBtn) els.installBtn.style.display='inline-flex';
+});
+els.installBtn?.addEventListener('click', async ()=>{
+  if(!deferredPrompt) return;
+  els.installBtn.disabled=true;
+  await deferredPrompt.prompt();
+  deferredPrompt=null;
+  els.installBtn.style.display='none';
+});
+
+/* ===== Service Worker =====
+   مهم: ملف sw.js لازم يكون داخل /my-finance/ ويتم تسجيله بهذا المسار */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{ navigator.serviceWorker.register('/my-finance/sw.js').catch(()=>{}); });
+}
 
 /* تهيئة */
 function init(){
@@ -648,7 +669,7 @@ function init(){
   saveCommitments();
   refreshAccountSelects(); refreshCategorySelect(); drawCatsBadges();
   ensureAdvanceAllCommitments(); drawCommitments(); render();
-  endRequiredToggle();
+  els.cEndAt?.toggleAttribute('required', els.cRecurring.checked);
 }
 init();
 </script>
