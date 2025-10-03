@@ -1,36 +1,29 @@
-const CACHE = 'pf-cache-v2';
+const CACHE = 'pf-cache-v3';   // ← زوّد الرقم عشان يجبر التحديث
 const ASSETS = [
   './',
   './index.html',
   './manifest.json'
-  // لو أضفت ملفات ثابتة (أيقونات/صور/خطوط) ضيف مساراتها هنا
 ];
 
-self.addEventListener('install', e => {
+self.addEventListener('install', e=>{
+  e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));
+});
+self.addEventListener('activate', e=>{
   e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())
+    caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))
+      .then(()=>self.clients.claim())
   );
 });
-
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
-  );
-});
-
-self.addEventListener('fetch', e => {
-  const req = e.request;
-  if (req.method !== 'GET') return;
+self.addEventListener('fetch', e=>{
+  const req=e.request;
+  if(req.method!=='GET') return;
   e.respondWith(
     caches.match(req).then(cached =>
-      cached ||
-      fetch(req).then(res => {
-        const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(req, copy)).catch(()=>{});
+      cached || fetch(req).then(res=>{
+        const copy=res.clone();
+        caches.open(CACHE).then(c=>c.put(req,copy)).catch(()=>{});
         return res;
-      }).catch(() => cached)
+      }).catch(()=>cached)
     )
   );
 });
